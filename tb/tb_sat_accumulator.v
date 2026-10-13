@@ -22,20 +22,23 @@ module tb_sat_accumulator;
 
     always #5 clk = ~clk;
 
-    task check_output;
+   task check_output;
         input [15:0] expected_acc;
         input        expected_sat;
         input [100*8:1] test_name;
+        reg [7:0] expected_uo;
         begin
-            if (uio_out[0] !== expected_sat) begin
-                $display("[FAIL] %0s: Saturation flag mismatch! Expected: %b, Got: %b", test_name, expected_sat, uio_out[0]);
+            expected_uo = expected_acc[15:8]; // 8 bit cao của kết quả
+            if ((uio_out[0] !== expected_sat) || (uo_out !== expected_uo)) begin
+                $display("[FAIL] %0s: Mismatch! Expected (uo_out=%h, sat=%b), Got (uo_out=%h, sat=%b)", 
+                         test_name, expected_uo, expected_sat, uo_out, uio_out[0]);
                 errors = errors + 1;
             end else begin
-                $display("[PASS] %0s: Saturation flag = %b", test_name, uio_out[0]);
+                $display("[PASS] %0s: uo_out = 8'h%h, Saturation flag = %b", test_name, uo_out, uio_out[0]);
             end
         end
     endtask
-
+    
     initial begin
         $dumpfile("sim/tb_sat_accumulator.vcd");
         $dumpvars(0, tb_sat_accumulator);
