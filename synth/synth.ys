@@ -1,0 +1,20 @@
+# Read RTL design
+read_verilog -sv rtl/sat_accumulator.v
+
+# Hierarchy check and set top module
+hierarchy -top sat_accumulator
+
+# High-level synthesis & optimization
+proc; opt; fsm; opt; memory; opt
+
+# Mapping to internal gate library
+techmap; opt
+
+# Flatten the design hierarchy for cell count
+flatten
+
+# Generate synthesis reports
+stat
+
+# Write synthesized gate-level netlist
+write_verilog synth/sat_accumulator_netlist.v
