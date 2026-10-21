@@ -60,5 +60,8 @@ module tb_g04_sat_accum16;
         $display("=== Simulation Finished ===");
         $finish;
     end
-
+initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars(0, tb_sat_accumulator);
+end
 endmodule
