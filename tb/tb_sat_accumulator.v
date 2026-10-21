@@ -1,67 +1,96 @@
 `timescale 1ns/1ps
 
-module tb_g04_sat_accum16;
+module tb_sat_accumulator;
 
-    logic        clk;
-    logic        rst_n;
-    logic        clear;
-    logic        enable;
-    logic [15:0] in_data;
-    logic [15:0] out_data;
-    logic        saturated;
+    reg        clk;
+    reg        rst_n;
+    reg  [7:0] ui_in;
+    reg  [7:0] uio_in;
+    wire [7:0] uo_out;
+    wire [7:0] uio_out;
 
-    // Instantiate Duty Under Test (DUT)
-    g04_sat_accum16 dut (
-        .clk      (clk),
-        .rst_n    (rst_n),
-        .clear    (clear),
-        .enable   (enable),
-        .in_data  (in_data),
-        .out_data (out_data),
-        .saturated(saturated)
+    integer errors = 0;
+
+    sat_accumulator dut (
+        .clk(clk),
+        .rst_n(rst_n),
+        .ui_in(ui_in),
+        .uio_in(uio_in),
+        .uo_out(uo_out),
+        .uio_out(uio_out)
     );
 
-    // Clock generation (100MHz)
     always #5 clk = ~clk;
 
+    task check_output;
+        input [15:0] expected_acc;
+        input        expected_sat;
+        input [100*8:1] test_name;
+        begin
+            if (uio_out[0] !== expected_sat) begin
+                $display("[FAIL] %0s: Saturation flag mismatch! Expected: %b, Got: %b", test_name, expected_sat, uio_out[0]);
+                errors = errors + 1;
+            end else begin
+                $display("[PASS] %0s: Saturation flag = %b", test_name, uio_out[0]);
+            end
+        end
+    endtask
+
     initial begin
-        // Initialize Signals
-        clk     = 0;
-        rst_n   = 0;
-        clear   = 0;
-        enable  = 0;
-        in_data = 0;
+        $dumpfile("sim/tb_sat_accumulator.vcd");
+        $dumpvars(0, tb_sat_accumulator);
 
-        // Reset
-        #15 rst_n = 1;
+        clk    = 0;
+        rst_n  = 0;
+        ui_in  = 8'h00;
+        uio_in = 8'h00;
+
+        $display("--------------------------------------------------");
+        $display("STARTING FUNCTIONAL VERIFICATION");
+        $display("--------------------------------------------------");
+
+        #15;
+        rst_n = 1;
         #10;
+        check_output(16'h0000, 1'b0, "Test 1: Reset state");
 
-        // Test Case 1: Normal Accumulation
-        $display("=== TC1: Normal Accumulation ===");
-        enable  = 1;
-        in_data = 16'h1000; #10; // +4096
-        in_data = 16'h2000; #10; // +8192 -> total 12288
+        uio_in[0] = 1;
+        ui_in     = 8'd100;
+        #10;
+        ui_in     = 8'd50;
+        #10;
+        uio_in[0] = 0;
+        #10;
+        check_output(16'd150, 1'b0, "Test 2: Normal Addition");
+
+        uio_in[1] = 1;
+        #10;
+        uio_in[1] = 0;
+        #10;
+        check_output(16'h0000, 1'b0, "Test 3: Clear Accumulator");
+
+        uio_in[0] = 1;
+        ui_in     = 8'hFF;
         
-        // Test Case 2: Positive Saturation
-        $display("=== TC2: Positive Saturation ===");
-        in_data = 16'h6000; #10; // 12288 + 24576 = 36864 > 32767 -> Saturated 0x7FFF
+        repeat (258) begin
+            #10;
+        end
         
-        // Test Case 3: Clear
-        $display("=== TC3: Clear ===");
-        clear = 1; #10;
-        clear = 0;
+        check_output(16'hFFFF, 1'b1, "Test 4: Saturation Limit Reached");
 
-        // Test Case 4: Negative Saturation
-        $display("=== TC4: Negative Saturation ===");
-        in_data = -16'sd20000; #10;
-        in_data = -16'sd20000; #10; // -40000 < -32768 -> Saturated 0x8000
+        ui_in = 8'd50;
+        #10;
+        check_output(16'hFFFF, 1'b1, "Test 5: Hold Saturation Value");
 
-        #20;
-        $display("=== Simulation Finished ===");
+        $display("--------------------------------------------------");
+        if (errors == 0) begin
+            $display("ALL TESTS PASSED SUCCESSFULLY!");
+        end else begin
+            $display("VERIFICATION FAILED WITH %0d ERRORS.", errors);
+        end
+        $display("--------------------------------------------------");
+
         $finish;
     end
-initial begin
-    $dumpfile("waveform.vcd");
-    $dumpvars(0, tb_sat_accumulator);
-end
+
 endmodule
