@@ -1,56 +1,53 @@
-/*
- * Module: sat_accumulator
- * Description: 16-bit Saturation Accumulator for Tiny Tapeout
- */
+// Module: g04_sat_accum16
+// Description: 16-bit Saturated Accumulator (2's complement)
 
-`default_nettype none
-
-module sat_accumulator (
-    input  wire       clk,        // Clock hệ thống
-    input  wire       rst_n,      // Reset cứng (Active-low)
-    input  wire [7:0] ui_in,      // Mẫu ngõ vào 8-bit
-    input  wire [7:0] uio_in,     // uio_in[0] = Add, uio_in[1] = Clear
-    output wire [7:0] uo_out,     // 8 bit thấp của bộ tích lũy acc[7:0]
-    output wire [7:0] uio_out     // uio_out[0] = Flag bão hòa, uio_out[7:1] = acc[15:9]
+module g04_sat_accum16 (
+    input  logic        clk,
+    input  logic        rst_n,      // Asynchronous active-low reset
+    input  logic        clear,      // Synchronous clear
+    input  logic        enable,     // Accumulate enable
+    input  logic [15:0] in_data,    // 16-bit signed input
+    output logic [15:0] out_data,   // 16-bit signed output
+    output logic        saturated   // High when saturation occurs
 );
 
-    // Thanh ghi lưu giá trị tích lũy 16-bit
-    reg [15:0] acc_reg;
-    reg        sat_flag_reg;
+    // Constants for 16-bit signed limits
+    localparam logic [15:0] MAX_POS = 16'sh7FFF; // +32767
+    localparam logic [15:0] MAX_NEG = 16'sh8000; // -32768
 
-    // Tín hiệu điều khiển
-    wire add_en   = uio_in[0];
-    wire clear_en = uio_in[1];
+    logic signed [16:0] acc_ext; // Extended 17-bit accumulator for overflow detection
+    logic signed [16:0] sum_ext;
 
-    // Biến tính toán phép cộng 17-bit để kiểm tra tràn
-    wire [16:0] sum_ext = {1'b0, acc_reg} + {9'b0, ui_in};
+    // Calculate extended sum
+    assign sum_ext = $signed({acc_ext[15], acc_ext[15:0]}) + $signed({in_data[15], in_data});
 
-    always @(posedge clk or negedge rst_n) begin
+    // Saturation Logic
+    always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            acc_reg      <= 16'h0000;
-            sat_flag_reg <= 1'b0;
-        end else begin
-            if (clear_en) begin
-                // Xóa bộ tích lũy và cờ bão hòa
-                acc_reg      <= 16'h0000;
-                sat_flag_reg <= 1'b0;
-            end else if (add_en) begin
-                if (sat_flag_reg || sum_ext[16] || (sum_ext[15:0] == 16'hFFFF)) begin
-                    // Đạt hoặc vượt ngưỡng cực đại (65535) -> Giữ ở bão hòa
-                    acc_reg      <= 16'hFFFF;
-                    sat_flag_reg <= 1'b1;
-                end else begin
-                    // Cộng bình thường
-                    acc_reg      <= sum_ext[15:0];
-                    sat_flag_reg <= 1'b0;
-                end
+            acc_ext   <= '0;
+            saturated <= 1'b0;
+        end else if (clear) begin
+            acc_ext   <= '0;
+            saturated <= 1'b0;
+        end else if (enable) begin
+            // Check for positive overflow (> +32767)
+            if (sum_ext > $signed({1'b0, MAX_POS})) begin
+                acc_ext   <= $signed({1'b0, MAX_POS});
+                saturated <= 1'b1;
+            end
+            // Check for negative overflow (< -32768)
+            else if (sum_ext < $signed({1'b1, MAX_NEG})) begin
+                acc_ext   <= $signed({1'b1, MAX_NEG});
+                saturated <= 1'b1;
+            end
+            // Normal accumulation
+            else begin
+                acc_ext   <= sum_ext;
+                saturated <= 1'b0;
             end
         end
     end
 
-    // Gán ngõ ra
-    assign uo_out      = acc_reg[7:0];
-    assign uio_out[0]  = sat_flag_reg;
-    assign uio_out[7:1] = acc_reg[15:9];
+    assign out_data = acc_ext[15:0];
 
 endmodule
