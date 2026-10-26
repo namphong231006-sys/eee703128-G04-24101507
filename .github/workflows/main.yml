@@ -19,7 +19,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y iverilog
 
-      - name: Run Verilog Simulation
+      - name: Run Simulation
         run: |
-          iverilog -o sim.out rtl/*.v tb/*.v
-          vvp sim.out
+          iverilog -g2012 -o sim 04_IMPLEMENTATION/rtl/g04_sat_accum16.sv 04_IMPLEMENTATION/tb/g04_sat_accum16_tb.sv
+          vvp sim
