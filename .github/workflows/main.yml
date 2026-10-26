@@ -21,5 +21,5 @@ jobs:
 
       - name: Run Simulation
         run: |
-          iverilog -g2012 -o sim 04_IMPLEMENTATION/rtl/g04_sat_accum16.sv 04_IMPLEMENTATION/tb/g04_sat_accum16_tb.sv
+          iverilog -g2012 -o sim 04_IMPLEMENTATION/rtl/g04_sat_accum16.sv 05_VERIFICATION/tb/g04_tb.sv
           vvp sim
