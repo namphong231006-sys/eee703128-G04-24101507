@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G04 — Bộ tích luỹ có bão hoà 16-bit · Ghi chú thực hiện</title>
+<style>
+:root{
+  --bg:#ffffff; --fg:#1a1d21; --muted:#5c6570; --line:#e3e7eb;
+  --accent:#1f5fa9; --accent-soft:#eef4fb; --code-bg:#f5f7f9;
+  --ok:#137a4d; --ok-bg:#e8f6ee; --warn:#8a5a00; --warn-bg:#fdf4e2;
+  --bad:#a52020; --bad-bg:#fceded; --open:#7a5ba8; --open-bg:#f3eefa;
+  --maxw:960px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --fg:#e6e9ec; --muted:#98a2ad; --line:#2a2f36;
+    --accent:#6fa8e0; --accent-soft:#1c2733; --code-bg:#1b1f24;
+    --ok:#5cc08d; --ok-bg:#16291f; --warn:#d8a54a; --warn-bg:#2a2314;
+    --bad:#e88b8b; --bad-bg:#2b1a1a; --open:#b79ad6; --open-bg:#241d2e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --fg:#e6e9ec; --muted:#98a2ad; --line:#2a2f36;
+  --accent:#6fa8e0; --accent-soft:#1c2733; --code-bg:#1b1f24;
+  --ok:#5cc08d; --ok-bg:#16291f; --warn:#d8a54a; --warn-bg:#2a2314;
+  --bad:#e88b8b; --bad-bg:#2b1a1a; --open:#b79ad6; --open-bg:#241d2e;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 16px 96px}
+header.doc{
+  border-bottom:1px solid var(--line); margin-bottom:28px; padding:36px 0 22px;
+}
+header.doc .eyebrow{
+  font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; margin-bottom:10px;
+}
+header.doc h1{font-size:clamp(24px,4.4vw,34px); line-height:1.25; margin:0 0 14px}
+.badges{display:flex; flex-wrap:wrap; gap:7px; margin-top:6px}
+.badge{
+  font-size:12.5px; padding:3px 10px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted); background:var(--accent-soft);
+  white-space:nowrap;
+}
+.badge.ok{color:var(--ok); background:var(--ok-bg); border-color:transparent}
+.badge.warn{color:var(--warn); background:var(--warn-bg); border-color:transparent}
+.badge.bad{color:var(--bad); background:var(--bad-bg); border-color:transparent}
+.badge.open{color:var(--open); background:var(--open-bg); border-color:transparent}
+nav.toc{
+  border:1px solid var(--line); border-radius:10px; padding:16px 20px;
+  margin:0 0 32px; background:var(--accent-soft);
+}
+nav.toc p{margin:0 0 8px; font-weight:700; font-size:13px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted)}
+nav.toc ul{margin:0; padding-left:20px}
+nav.toc li{margin:3px 0}
+nav.toc a{color:var(--fg); text-decoration:none}
+nav.toc a:hover{color:var(--accent); text-decoration:underline}
+nav.toc ul ul{padding-left:18px; font-size:14.5px}
+h2{font-size:22px; margin:40px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line)}
+h3{font-size:18px; margin:28px 0 8px}
+h4{font-size:16px; margin:22px 0 6px; color:var(--muted)}
+p{margin:12px 0}
+a{color:var(--accent)}
+ul,ol{padding-left:24px}
+li{margin:4px 0}
+code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-size:.9em; background:var(--code-bg); padding:1.5px 5px; border-radius:4px;
+}
+pre{
+  background:var(--code-bg); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px; overflow-x:auto; line-height:1.55; font-size:13.5px;
+}
+pre code{background:none; padding:0; font-size:inherit}
+blockquote{
+  margin:16px 0; padding:2px 18px; border-left:3px solid var(--accent);
+  background:var(--accent-soft); border-radius:0 8px 8px 0; color:var(--fg);
+}
+blockquote p{margin:10px 0}
+.tablewrap{overflow-x:auto; margin:16px 0; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{border:1px solid var(--line); padding:7px 11px; text-align:left; vertical-align:top}
+th{background:var(--accent-soft); font-weight:650; white-space:nowrap}
+tbody tr:nth-child(even) td{background:color-mix(in srgb, var(--code-bg) 55%, transparent)}
+hr{border:0; border-top:1px solid var(--line); margin:34px 0}
+footer.doc{
+  margin-top:56px; padding-top:18px; border-top:1px solid var(--line);
+  color:var(--muted); font-size:13.5px;
+}
+.themebtn{
+  position:fixed; right:14px; bottom:14px; z-index:10;
+  border:1px solid var(--line); background:var(--bg); color:var(--muted);
+  border-radius:999px; padding:8px 14px; font-size:13px; cursor:pointer;
+}
+.themebtn:hover{color:var(--fg)}
+@media (max-width:640px){
+  .wrap{padding:0 16px 72px}
+  header.doc{padding:26px 0 18px}
+  nav.toc{padding:14px 16px}
+}
+@media print{
+  .themebtn{display:none}
+  nav.toc{break-inside:avoid}
+  pre,table,blockquote{break-inside:avoid}
+  body{font-size:11pt}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="eyebrow">RTL2GDS · Đề G04 · Ghi chú thực hiện</div>
+  <h1>G04 — Bộ tích luỹ có bão hoà 16-bit · Ghi chú thực hiện</h1>
+  <div class="badges"><span class="badge ">🔧 Đã vá và xác minh lại</span><span class="badge ">G · Xử lý tín hiệu số đơn giản</span><span class="badge ">Độ khó: Trung bình</span><span class="badge ">Loại mạch: Tuần tự</span><span class="badge ok">Mô phỏng: PASS</span><span class="badge ">Tổng hợp: 119 cell · 18 FF</span><span class="badge ">Đường tới hạn: 6,71 ns</span><span class="badge warn">Physical design: CHƯA CHẠY</span></div>
+</header>
+<nav class="toc"><p>Mục lục</p><ul><li><a href="#1-bai-toan-nay-thuc-chat-la-gi">1. Bài toán này thực chất là gì</a></li><li><a href="#2-ban-chat-ky-thuat-co-che-hoat-dong">2. Bản chất kỹ thuật — cơ chế hoạt động</a></li><li><a href="#3-doc-ma-nguon-rtl-lam-gi-tung-dong-quan-trong">3. Đọc mã nguồn: RTL làm gì, từng dòng quan trọng</a></li><li><a href="#4-vi-sao-chon-kien-truc-nay">4. Vì sao chọn kiến trúc này</a></li><li><a href="#5-cach-thuc-hien-lo-trinh-8-buoc-tu-dac-ta-toi-gdsii">5. Cách thực hiện — lộ trình 8 bước từ đặc tả tới GDSII</a></li><li><a href="#6-so-lieu-that-da-do-duoc-va-cach-doc-chung">6. Số liệu thật đã đo được và cách đọc chúng</a></li><li><a href="#7-tra-loi-cac-cau-hoi-ky-thuat-cua-charter-muc-2">7. Trả lời các câu hỏi kỹ thuật của Charter (mục 2)</a></li><li><a href="#8-tra-loi-cau-phan-tich-rieng-charter-muc-9">8. Trả lời câu phân tích riêng (Charter mục 9)</a></li><li><a href="#9-nhung-cho-sinh-vien-hay-sai-va-cach-phat-hien">9. Những chỗ sinh viên hay sai và cách phát hiện</a></li><li><a href="#10-cau-hoi-mentor-nen-dat-khi-bao-ve">10. Câu hỏi mentor nên đặt khi bảo vệ</a></li><li><a href="#11-gioi-han-da-chung-minh-duoc-gi-chua-chung-minh-duoc-gi">11. Giới hạn: đã chứng minh được gì, chưa chứng minh được gì</a></li></ul></nav>
+<main>
+<h2 id="1-bai-toan-nay-thuc-chat-la-gi">1. Bài toán này thực chất là gì</h2>
+<p>Bề ngoài G04 là "cộng dồn rồi kẹp ở trần". Thực chất nó là bài toán <strong>giữ tính đơn điệu của
+một phép đo tích luỹ khi tài nguyên biểu diễn hữu hạn</strong>.</p>
+<p>Bối cảnh của Charter mục 1 nói rõ: công tơ điện tử cộng dồn năng lượng tiêu thụ. Một công tơ
+là bộ đếm tích luỹ — <strong>số đọc của nó phải không bao giờ giảm</strong>. Đó không phải mong muốn thẩm
+mỹ, đó là tính chất mà toàn bộ hệ thống phía trên dựa vào: phần mềm đọc công tơ tính <strong>hiệu
+số</strong> giữa hai lần đọc để ra lượng tiêu thụ trong kỳ.</p>
+<p>Khi bộ tích luỹ 16 bit đầy, phần cứng phải chọn một trong hai hành vi:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Quay vòng (mod 2¹⁶)</th>
+<th>Bão hoà</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0xFFFF + 1</code></td>
+<td><code>0x0000</code></td>
+<td><code>0xFFFF</code></td>
+</tr>
+<tr>
+<td>Tính đơn điệu</td>
+<td>❌ <strong>mất</strong></td>
+<td>✅ <strong>giữ</strong></td>
+</tr>
+<tr>
+<td>Hiệu số hai lần đọc</td>
+<td>có thể <strong>âm</strong> hoặc sai 65535</td>
+<td><strong>0</strong> — sai nhưng bị chặn</td>
+</tr>
+<tr>
+<td>Người đọc hiểu là</td>
+<td><em>"khách hàng chưa dùng điện"</em></td>
+<td><em>"thiết bị hết thang đo"</em></td>
+</tr>
+<tr>
+<td>Có dấu hiệu cảnh báo không</td>
+<td>❌ <strong>không có gì cả</strong></td>
+<td>✅ cờ <code>sat</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Quay vòng <strong>sai không kiểm soát được</strong>; bão hoà <strong>sai theo một hướng duy nhất, bị chặn, và có
+cảnh báo</strong>. Trong đo lường thương mại, khác biệt đó là khác biệt giữa "ghi thiếu" và "sai hẳn
+có thể bị coi là gian lận".</p>
+<p>Bài toán còn có một nửa thứ hai ít người để ý: <strong>giao diện chỉ cho ra 8 bit cao của một
+trạng thái 16 bit</strong>. Nửa này tưởng phụ, nhưng nó chính là thứ đã sinh ra lỗi trong hồ sơ.</p>
+<h2 id="2-ban-chat-ky-thuat-co-che-hoat-dong">2. Bản chất kỹ thuật — cơ chế hoạt động</h2>
+<p>Cơ chế cốt lõi gồm <strong>ba bước</strong>, và cái hay nằm ở chỗ cả ba đều rất rẻ:</p>
+<pre><code>   (1) Cong MO RONG 17 bit :  total_ext = {1'b0, acc_q} + {1'b0, inc_in}
+   (2) Phat hien tran      :  sat_next  = total_ext[16]          &lt;- BIT CARRY-OUT
+   (3) Ep ve tran          :  acc_next[i] = total_ext[16] | total_ext[i]
+</code></pre>
+<p><strong>Bước (2) tốn 0 cell.</strong> Carry-out của tầng cộng thứ 16 <strong>vốn đã được tính</strong> trong chuỗi
+carry — ở một bộ cộng 16 bit thông thường nó chỉ bị vứt đi. Mở rộng lên 17 bit chỉ là <em>giữ
+lại nó</em>. Đây đúng là điều Charter mục 10 yêu cầu (<em>"dùng bit carry"</em>).</p>
+<p><strong>Bước (3) là phép OR, không phải mux.</strong> Vì trần <code>0xFFFF</code> là <strong>toàn bit 1</strong>, "chọn giữa
+<code>0xFFFF</code> và tổng thật" quy về <code>sat | total_ext[i]</code> — một cổng OR mỗi bit thay vì một mux 2:1.
+Nếu trần là một giá trị tuỳ ý (ví dụ <code>0xF000</code>) thì phải dùng mux thật, đắt gấp đôi.</p>
+<p>Nhưng đây mới là <strong>nút thắt thật sự</strong>, và nó không nằm ở số cell:</p>
+<blockquote>
+<p><strong>Bão hoà làm MỌI bit của bộ tích luỹ phụ thuộc vào carry-out của bit CAO NHẤT.</strong></p>
+</blockquote>
+<p>Trong một bộ tích luỹ quay vòng, <code>acc_next[1] = s[1]</code> — chỉ cần <code>carry[1]</code>, khoảng 2 mức
+logic, xong sau ~0,2 ns, và bit đó có slack gần bằng cả chu kỳ. Ở G04, <code>acc_next[1] =
+c16 | s[1]</code> — nó phải đợi <strong>toàn bộ 16 tầng carry</strong>.</p>
+<p>Số liệu thật xác nhận một cách không thể rõ hơn: <strong>endpoint của đường tới hạn là <code>acc_q[1]</code></strong>
+— bit thứ hai từ dưới lên — với arrival <strong>6,71 ns</strong>. Và trong cùng báo cáo, <code>acc_out_hi[2]</code>
+cũng có arrival <strong>6,71 ns</strong>. Ở một bộ cộng quay vòng, hai bit này phải chênh nhau ~14 tầng
+carry. Đồ thị phụ thuộc đã bị <strong>san phẳng</strong>: không còn bit nào "xong sớm", không còn dư địa
+slack nào cho công cụ khai thác.</p>
+<p><strong>Đó là cái giá thật của bão hoà — và nó không nhìn thấy được nếu chỉ đếm cell.</strong></p>
+<h2 id="3-doc-ma-nguon-rtl-lam-gi-tung-dong-quan-trong">3. Đọc mã nguồn: RTL làm gì, từng dòng quan trọng</h2>
+<p><strong>(a) Phép cộng mở rộng — dòng 16, trái tim của thiết kế:</strong></p>
+<pre><code class="language-systemverilog">    assign total_ext = {1'b0, acc_q} + {1'b0, inc_in};
+</code></pre>
+<p><code>total_ext</code> khai <code>logic [16:0]</code> (dòng 12). Hai toán hạng được <strong>mở rộng không dấu lên 17
+bit</strong> trước khi cộng, nên bit 16 của kết quả chính là carry-out — <strong>không bị cắt mất</strong>. Đây
+là toàn bộ sự khác biệt giữa đúng và sai của đề này.</p>
+<p><strong>(b) Phát hiện và ép — dòng 18–21:</strong></p>
+<pre><code class="language-systemverilog">    always_comb begin
+        sat_next = total_ext[16];
+        acc_next = total_ext[16] ? 16'hFFFF : total_ext[15:0];
+    end
+</code></pre>
+<p>Hai dòng. <code>sat_next</code> là <strong>dây thuần</strong>, 0 cell. <code>acc_next</code> là 16 cổng OR (netlist: tín hiệu
+tràn nằm ở net <code>_093_</code> với <strong>15 tải</strong>, trong đó <strong>14 × <code>o21ai_0</code> chân <code>A1</code></strong>).</p>
+<p><strong>(c) Nạp trạng thái — dòng 32–37:</strong></p>
+<pre><code class="language-systemverilog">            if (valid_in) begin
+                acc_q      &lt;= acc_next;
+                acc_out_hi &lt;= acc_next[15:8];
+                sat        &lt;= sat_next;
+                valid_out  &lt;= 1'b1;
+            end
+</code></pre>
+<p>Chú ý: <code>acc_q</code> và <code>acc_out_hi</code> <strong>luôn nhận cùng dữ liệu, cùng cạnh, cùng enable</strong> ⟹ chúng
+tương đương ở mọi thời điểm (INV-9). Yosys phát hiện điều đó và <strong>gộp <code>acc_q[15:8]</code> vào
+<code>acc_out_hi</code></strong>: netlist chỉ có <code>acc_q[0]</code>…<code>acc_q[7]</code>, <strong>không tồn tại</strong> <code>acc_q[8..15]</code>. Kết
+quả: <strong>18 flip-flop</strong> thay vì 26.</p>
+<p><strong>(d) Không có cổng <code>xoá</code> — dòng 1–9:</strong> danh sách cổng gồm <code>clk</code>, <code>rst_n</code>, <code>valid_in</code>,
+<code>inc_in</code>, <code>valid_out</code>, <code>acc_out_hi</code>, <code>sat</code>. Charter mục 4 yêu cầu <code>uio_in[1] = xoá</code>. <strong>Thiếu.</strong></p>
+<h2 id="4-vi-sao-chon-kien-truc-nay">4. Vì sao chọn kiến trúc này</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Phương án</th>
+<th>Phát hiện tràn</th>
+<th>Chi phí thêm</th>
+<th>Đánh giá</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A · Bit carry của cộng 17 bit</strong> (đã chọn)</td>
+<td><code>total_ext[16]</code></td>
+<td>≈ 1 cell (tầng carry) + ≈ 14 (ép)</td>
+<td>✅ <strong>rẻ nhất, đúng nhất</strong></td>
+</tr>
+<tr>
+<td>B · So sánh <strong>trước</strong> khi cộng: <code>inc &gt; MAX − acc</code></td>
+<td>1 bộ trừ + 1 bộ so sánh 16 bit</td>
+<td>≈ 40–60 cell</td>
+<td>⚠️ đúng nhưng đắt hơn nhiều</td>
+</tr>
+<tr>
+<td>C · So sánh <strong>sau</strong> khi cộng: <code>(acc+inc) &gt; 16'hFFFF</code></td>
+<td>—</td>
+<td>—</td>
+<td>❌ <strong>SAI — biểu thức luôn bằng 0</strong></td>
+</tr>
+<tr>
+<td>D · Quay vòng (không bão hoà)</td>
+<td>không có</td>
+<td>0</td>
+<td>❌ phá vỡ mục đích của đề</td>
+</tr>
+</tbody>
+</table></div>
+<p>Phương án C là <strong>cái bẫy mà Charter mục 10 cảnh báo</strong>, và nó nguy hiểm vì: cú pháp hợp lệ,
+Yosys tổng hợp bình thường, Icarus biên dịch sạch, và ABC còn "tối ưu" bằng cách <strong>xoá luôn
+tầng bão hoà</strong> (vì <code>sat</code> trở thành hằng 0) — netlist nhỏ hơn, trông như tối ưu tốt.
+Nó chỉ lộ ra ở ca vượt trần, mà testbench hiện tại <strong>không có ca đó</strong>.</p>
+<h2 id="5-cach-thuc-hien-lo-trinh-8-buoc-tu-dac-ta-toi-gdsii">5. Cách thực hiện — lộ trình 8 bước từ đặc tả tới GDSII</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Bước</th>
+<th>Việc</th>
+<th>Trạng thái thật của G04</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Đối chiếu Charter mục 4 với danh sách cổng <strong>trước khi viết mã</strong></td>
+<td>🔴 <strong>BỎ SÓT</strong> — thiếu <code>xoá</code>, sai độ rộng <code>inc_in</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Viết mô hình chuẩn Python + ca biên chính xác</td>
+<td>✅ <code>reference_model.py</code> — <strong>PASS 6/6</strong>, gồm 5000 ca ngẫu nhiên</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Viết RTL dùng <strong>bit carry</strong> để phát hiện tràn</td>
+<td>✅ đúng cả bốn ràng buộc Charter mục 10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Viết testbench phủ 4 ca bắt buộc Charter mục 8</td>
+<td>🔴 <strong>0/4 ca thật sự đúng</strong> (vector sai + thiếu cổng)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Mô phỏng RTL</td>
+<td>🔴 <strong>RAN_WITH_ISSUES</strong> — dừng <code>t = 56</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Tổng hợp</td>
+<td>✅ 119 cell · 18 FF · 1083,5392 µm²</td>
+</tr>
+<tr>
+<td>7</td>
+<td>STA + công suất</td>
+<td>✅ arrival 6,71 ns · slack 3,16 ns · 1,40e-04 W</td>
+</tr>
+<tr>
+<td>8</td>
+<td>P&amp;R → DRC/LVS → GDSII</td>
+<td>⬜ <strong>CHƯA CHẠY</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>Bước 1 là bước bị bỏ sót, và nó đắt nhất.</strong> Nếu đối chiếu Charter mục 4 với danh sách
+cổng ngay từ đầu, cả hai vấn đề (thiếu <code>xoá</code>, sai độ rộng <code>inc_in</code>) đã lộ ra <strong>trước khi</strong>
+viết dòng RTL đầu tiên. Sửa bây giờ kéo theo phải chạy lại toàn bộ tầng vật lý — và sửa độ
+rộng <code>inc_in</code> còn <strong>đổi cả kiến trúc</strong> (phải nạp hai nhịp ⟹ sinh ra một FSM thật).</p>
+</blockquote>
+<h2 id="6-so-lieu-that-da-do-duoc-va-cach-doc-chung">6. Số liệu thật đã đo được và cách đọc chúng</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Chỉ số</th>
+<th style="text-align: right;">Giá trị</th>
+<th>Nguồn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Số cell</td>
+<td style="text-align: right;">119</td>
+<td><code>synth_stat.txt</code></td>
+</tr>
+<tr>
+<td>Flip-flop</td>
+<td style="text-align: right;">18</td>
+<td>như trên</td>
+</tr>
+<tr>
+<td>Diện tích</td>
+<td style="text-align: right;">1083,5392 µm²</td>
+<td>như trên</td>
+</tr>
+<tr>
+<td>Startpoint → Endpoint</td>
+<td style="text-align: right;"><code>inc_in[1]</code> → <code>_206_</code> (= <strong><code>acc_q[1]</code></strong>)</td>
+<td><code>timing_report_max.txt</code></td>
+</tr>
+<tr>
+<td>Data arrival</td>
+<td style="text-align: right;"><strong>6,71 ns</strong></td>
+<td>như trên</td>
+</tr>
+<tr>
+<td>Slack</td>
+<td style="text-align: right;"><strong>3,16 ns</strong> (MET)</td>
+<td>như trên</td>
+</tr>
+<tr>
+<td>Số cell trên đường tới hạn</td>
+<td style="text-align: right;"><strong>19</strong>, trong đó <strong>12 <code>maj3_1</code></strong></td>
+<td>như trên</td>
+</tr>
+<tr>
+<td>WNS / TNS</td>
+<td style="text-align: right;">0,00 / 0,00</td>
+<td><code>wns.txt</code>, <code>tns.txt</code></td>
+</tr>
+<tr>
+<td>Công suất</td>
+<td style="text-align: right;">1,40e-04 W (tổ hợp <strong>36,0 %</strong> · tuần tự 64,0 %)</td>
+<td><code>power_report.txt</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Những con số này CHỨNG MINH:</strong>
+- RTL tổng hợp được ra standard cell sky130 thật.
+- <strong>18 flip-flop</strong> khớp <strong>chính xác</strong> với Charter mục 10 (<em>"16 ô nhớ tích luỹ + 1 cờ ≈ 17–18"</em>)
+  — nhưng chỉ vì Yosys đã <strong>gộp 8 flip-flop</strong> (§3c). Không gộp thì là 26.
+- Logic bão hoà <strong>tồn tại thật</strong> trong netlist: net <code>_093_</code> với 15 tải, 14 trong đó là tầng ép.
+- Ở góc <code>tt_025C_1v80</code> với chu kỳ giả định 10 ns, đường dài nhất còn dư 3,16 ns.</p>
+<p><strong>Những con số này KHÔNG chứng minh:</strong>
+- <strong>Không</strong> chứng minh mạch làm đúng chức năng — mô phỏng dừng ở chu kỳ thứ sáu (dù phán xử
+  cho thấy <strong>DUT đúng, testbench sai</strong>).
+- <strong>Không</strong> chứng minh "G04 chạy được ở 100 MHz" — chưa ký sinh dây, một góc PVT, skew = 0,
+  và phụ thuộc giả định <code>set_input_delay 1.0</code>.
+- <strong>Không</strong> chứng minh chi phí của bão hoà — cần chạy A/B (Charter mục 9, <strong>chưa chạy</strong>).</p>
+<p><strong>Ba con số đáng bàn nhất:</strong></p>
+<p><em>(a) Endpoint là <code>acc_q[1]</code>.</em> Bit thứ hai từ dưới lên là endpoint của đường tới hạn. Ở một
+bộ cộng bình thường đây là một trong những đường <strong>ngắn nhất</strong>. Đây là dấu vân tay không thể
+nhầm của bão hoà (§2).</p>
+<p><em>(b) Phân rã đường tới hạn.</em></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Đoạn</th>
+<th style="text-align: right;">Thời gian</th>
+<th style="text-align: right;">Tỉ lệ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Độ trễ vào (giả định)</td>
+<td style="text-align: right;">1,00 ns</td>
+<td style="text-align: right;">14,9 %</td>
+</tr>
+<tr>
+<td>Đầu chuỗi carry</td>
+<td style="text-align: right;">0,21 ns</td>
+<td style="text-align: right;">3,1 %</td>
+</tr>
+<tr>
+<td><strong>Chuỗi carry 16 bit</strong> (12 <code>maj3</code>)</td>
+<td style="text-align: right;"><strong>4,71 ns</strong></td>
+<td style="text-align: right;"><strong>70,2 %</strong></td>
+</tr>
+<tr>
+<td>Sinh tín hiệu tràn (<code>_136_</code>, fanout 15)</td>
+<td style="text-align: right;">0,47 ns</td>
+<td style="text-align: right;">7,0 %</td>
+</tr>
+<tr>
+<td><strong>Ép bão hoà + mux giữ/nạp</strong></td>
+<td style="text-align: right;"><strong>0,32 ns</strong></td>
+<td style="text-align: right;"><strong>4,8 %</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Phần <strong>chắc chắn</strong> thuộc về bão hoà là <strong>0,79 ns = 11,8 %</strong>. Nhưng như §2 đã nói, chi phí
+<strong>cấu trúc</strong> lớn hơn nhiều và chỉ lộ ra khi chạy A/B.</p>
+<p><em>(c) G04 là đề NHỎ NHẤT nhóm G (119 cell, 1083,5392 µm²) nhưng có đường tới hạn DÀI THỨ HAI
+(6,71 ns).</em> Diện tích chỉ bằng <strong>26,6 %</strong> của G02, nhưng arrival <strong>dài hơn 53 %</strong>.</p>
+<h2 id="7-tra-loi-cac-cau-hoi-ky-thuat-cua-charter-muc-2">7. Trả lời các câu hỏi kỹ thuật của Charter (mục 2)</h2>
+<p><strong>Câu 1 — Bão hoà khác quay vòng ở chỗ nào, và vì sao quay vòng nguy hiểm với công tơ?</strong>
+✅ <strong>Trả lời được.</strong> Khác nhau ở hành vi khi vượt trần: bão hoà dừng ở <code>0xFFFF</code>, quay vòng về
+<code>0x0000</code>. Nguy hiểm vì quay vòng <strong>phá vỡ tính đơn điệu</strong> — tính chất mà mọi phần mềm đọc
+công tơ dựa vào để tính hiệu số. Bão hoà sai theo một hướng, bị chặn, và có cờ <code>sat</code> báo;
+quay vòng sai 65535 đơn vị và <strong>không có dấu hiệu nào</strong>. Bảng đầy đủ: <code>functional_spec.md</code> §4.</p>
+<p><strong>Câu 2 — Phát hiện chạm trần bằng logic gì, tốn bao nhiêu cell?</strong>
+✅ <strong>Trả lời được một phần.</strong> Bằng <strong>bit carry-out của phép cộng mở rộng 17 bit</strong>
+(<code>total_ext[16]</code>) — chi phí <strong>phát hiện</strong> là <strong>0 cell</strong> vì bit đó vốn đã tồn tại trong chuỗi
+carry. Chi phí <strong>ép về trần</strong> đọc từ netlist: tín hiệu tràn (net <code>_093_</code>) có 15 tải, trong đó
+<strong>14 × <code>o21ai_0</code></strong> là tầng ép ⟹ <strong>≈ 14 cell = 11,8 %</strong> của 119 cell.
+⚠️ Đây là <strong>ước lượng từ cấu trúc netlist</strong>, không phải hiệu số A/B. Con số Charter thật sự
+đòi hỏi (§8) <strong>chưa có</strong>.</p>
+<p><strong>Câu 3 — Bộ tích luỹ 16 bit nhưng chỉ xuất 8 bit cao — mất mát gì?</strong>
+✅ <strong>Trả lời được, và có bằng chứng sống.</strong></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Mất mát</th>
+<th>Định lượng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Độ phân giải quan sát</td>
+<td>1 LSB ngoài = <strong>256</strong> LSB trong</td>
+</tr>
+<tr>
+<td>Không phân biệt "gần trần" với "đúng trần"</td>
+<td><code>acc_out_hi = 0xFF</code> ⟺ <code>acc ∈ [0xFF00, 0xFFFF]</code> — <strong>256 giá trị</strong></td>
+</tr>
+<tr>
+<td>Sai số cắt cụt, luôn thiếu</td>
+<td><code>floor(acc/256)</code>, sai số ∈ <code>[0, 255]</code></td>
+</tr>
+<tr>
+<td>⭐ <strong>Làm chính người viết testbench nhầm</strong></td>
+<td><code>simulation.log</code>: <code>sat mismatch got=0 expected=1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Được gì:</strong> tiết kiệm 8 chân ra trên ngân sách 24 chân — đủ chỗ cho <code>sat</code> và <code>valid_out</code>.</p>
+<h2 id="8-tra-loi-cau-phan-tich-rieng-charter-muc-9">8. Trả lời câu phân tích riêng (Charter mục 9)</h2>
+<p>Câu hỏi: <em>"chạy flow một lần có bão hoà, một lần để quay vòng, so sánh diện tích."</em></p>
+<p><strong>Trạng thái: ⬜ CHƯA CHẠY phiên bản quay vòng.</strong> REQ-G04-020 <strong>CHƯA THOẢ</strong>. Bảng phải điền
+và script cần chạy nằm ở <code>03_ARCHITECTURE/tradeoff.md</code> §7. <strong>Không bịa số.</strong></p>
+<p><strong>Những gì đã trả lời được từ một lần chạy:</strong></p>
+<ol>
+<li><strong>Chi phí diện tích ước lượng từ netlist:</strong> ≈ 17 cell (1 tầng carry + 14 cell ép bão hoà
+   + 2 cho FF <code>sat</code>) ≈ <strong>14 %</strong> của 119 cell.</li>
+<li><strong>Chi phí thời gian trực tiếp:</strong> <strong>0,79 ns = 11,8 %</strong> đường tới hạn (phần nằm <strong>sau</strong> khi
+   chuỗi carry đã xong ở 5,92 ns).</li>
+<li>⭐ <strong>Chi phí cấu trúc — phát hiện quan trọng nhất:</strong> bão hoà <strong>san phẳng đồ thị phụ thuộc</strong>.
+   Bằng chứng: <code>acc_q[1]</code> và <code>acc_out_hi[2]</code> có arrival <strong>bằng nhau (6,71 ns)</strong>; endpoint
+   đường tới hạn là một <strong>bit thấp</strong>. Ở bản quay vòng, 15/16 bit sẽ có slack lớn — dư địa mà
+   ABC dùng để chọn cell nhỏ hơn, chậm hơn, ít rò hơn. Bão hoà lấy mất dư địa đó.
+   ⟹ <strong>Chi phí diện tích thật (A/B) sẽ LỚN HƠN con số ≈17 cell ở trên</strong>, vì nó bao gồm cả
+   hiệu ứng "phải dùng cell to hơn ở khắp nơi". Đây chính là lý do Charter đòi chạy A/B thay
+   vì cộng cell bằng tay.</li>
+<li><strong>Cấu trúc phụ:</strong> bão hoà <strong>xung khắc</strong> với biểu diễn carry-save (thủ thuật tăng tốc mà
+   G02 dùng được), vì nó cần carry-out của bit cao nhất ⟹ phải giải quyết xong carry-save.</li>
+</ol>
+<h2 id="9-nhung-cho-sinh-vien-hay-sai-va-cach-phat-hien">9. Những chỗ sinh viên hay sai và cách phát hiện</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Sai lầm</th>
+<th>Hậu quả</th>
+<th>Phát hiện bằng bằng chứng nào</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>sat = ((acc_q + inc_in) &gt; 16'hFFFF)</code> trên 16 bit</td>
+<td><strong>Luôn bằng 0</strong> ⟹ mạch quay vòng; ABC còn xoá luôn tầng bão hoà</td>
+<td>Ca vượt trần (<code>0xFFFF + 1</code> phải cho <code>0xFFFF</code>, <code>sat = 1</code>). Và đếm cell: bản sai <strong>thiếu ≈14 cell</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Dùng <code>&gt;=</code> thay <code>&gt;</code>: <code>sat = (total &gt;= 16'hFFFF)</code></td>
+<td>Bão hoà <strong>sớm một đơn vị</strong>: <code>acc + inc = 65535</code> bị báo tràn oan</td>
+<td>Ca biên chính xác: <code>update(65534, 1)</code> phải cho <code>(65535, False)</code> — <code>test_exact_boundary</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>⭐ <strong>Nhầm <code>acc_out_hi</code> với <code>acc_q</code></strong></td>
+<td>Suy sai về trạng thái trong; viết vector kiểm thử sai</td>
+<td>🔴 <strong>Đây là lỗi thật của đề.</strong> <code>acc_out_hi = 0xFF</code> ⟺ <code>acc ∈ [0xFF00, 0xFFFF]</code>. Cách chắc chắn: kiểm white-box <code>dut.acc_q</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Tưởng <code>sat</code> nghĩa là <em>"đang ở trần"</em></td>
+<td><code>acc = 0xFFFF</code>, <code>inc = 0</code> cho <code>sat = 0</code> ⟹ tầng ngoài tưởng đã thoát trần</td>
+<td>INV-6; <code>test_exact_boundary</code>: <code>update(65535, 0) = (65535, False)</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Bão hoà <strong>không dính</strong> (chỉ cắt một lần)</td>
+<td>Sau khi chạm trần, lần cộng sau lại quay vòng</td>
+<td>Ca <code>test_sticky_saturation</code>: cộng <code>1, 2, 255, 65535</code> liên tiếp từ <code>0xFFFF</code>, <code>acc</code> phải giữ <code>0xFFFF</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dùng mux 2:1 cho tầng ép bão hoà</td>
+<td>Tốn gấp đôi cell so với cổng OR</td>
+<td>Vì trần là <strong>toàn bit 1</strong> nên <code>sat \| total_ext[i]</code> là đủ. Đối chiếu <code>o21ai_0</code> trong netlist</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Đếm flip-flop từ RTL (26) rồi khẳng định netlist phải khớp</td>
+<td>Netlist chỉ có <strong>18</strong></td>
+<td>Yosys <strong>gộp</strong> <code>acc_q[15:8]</code> vào <code>acc_out_hi</code> (INV-9). Tra netlist: <strong>không tồn tại</strong> <code>acc_q[8..15]</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Dự đoán endpoint đường tới hạn là <code>acc_q[15]</code></td>
+<td>Thực tế là <strong><code>acc_q[1]</code></strong></td>
+<td>Bão hoà làm mọi bit phụ thuộc <code>c16</code> ⟹ đồ thị bị san phẳng</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Coi cảnh báo <code>sorry: constant selects…</code> là nguyên nhân lỗi mô phỏng</td>
+<td>Đi sửa nhầm chỗ</td>
+<td>Cảnh báo đó <strong>không giải thích được</strong> <code>sat mismatch</code>. Nó chỉ nói danh sách nhạy của <code>always_comb</code> rộng hơn cần thiết — <strong>vô hại</strong></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Không đối chiếu Charter mục 4 với danh sách cổng</td>
+<td>Thiếu <code>xoá</code> ⟹ <strong>một ca bắt buộc trở nên bất khả thi</strong></td>
+<td>So bảng cổng RTL với Charter mục 4 — việc phải làm <strong>trước</strong> khi viết testbench</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Sửa DUT cho <code>sat</code> bật sớm để mô phỏng xanh</td>
+<td><strong>Phá một thiết kế đúng</strong> và tạo lỗi thật ở biên <code>0xFFFF</code></td>
+<td>Phán xử <code>known_issues.md</code> §4: <code>0xFF00 + 1 = 0xFF01 &lt; 0xFFFF</code> là <strong>số học</strong>, không phải quan điểm</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="10-cau-hoi-mentor-nen-dat-khi-bao-ve">10. Câu hỏi mentor nên đặt khi bảo vệ</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Câu hỏi</th>
+<th>Đáp án mong đợi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Vì sao <code>total_ext</code> rộng <strong>17</strong> bit chứ không phải 16?</td>
+<td>Để giữ lại <strong>carry-out</strong>. Nếu cộng trên 16 bit, kết quả bị cắt và mọi phép so sánh sau đó đều vô nghĩa — Charter mục 10 cảnh báo đúng chỗ này</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>acc = 0xFFFF</code>, <code>inc = 0</code>. <code>sat</code> bằng mấy? Vì sao?</td>
+<td><strong>0</strong>. <code>sat</code> báo <em>"phép cộng vừa rồi bị cắt"</em>, không báo <em>"đang ở trần"</em> (INV-6). Đây là ngữ nghĩa cần thầy chốt</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>acc = 65534</code>, <code>inc = 1</code>. Có bão hoà không?</td>
+<td><strong>Không.</strong> <code>= 65535</code> là <strong>đúng bằng</strong> trần, chưa vượt. Ranh giới là <code>&gt;</code> chứ không phải <code>&gt;=</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Ép về <code>0xFFFF</code> tốn mux hay tốn OR? Vì sao?</td>
+<td><strong>OR.</strong> Vì <code>0xFFFF</code> toàn bit 1 ⟹ <code>sat \| total_ext[i]</code>. Nếu trần là giá trị tuỳ ý thì mới cần mux, đắt gấp đôi</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Netlist có 18 flip-flop mà RTL mô tả 26 bit trạng thái. Giải thích.</td>
+<td>Yosys <strong>gộp</strong> <code>acc_q[15:8]</code> vào <code>acc_out_hi</code> vì hai thanh ghi luôn giống hệt nhau (INV-9). Netlist <strong>không có</strong> <code>acc_q[8..15]</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Endpoint đường tới hạn là <code>acc_q[1]</code> — bit thấp. Vì sao?</td>
+<td>Vì bão hoà làm <code>acc_next[i] = c16 \| s[i]</code> với <strong>mọi</strong> <code>i</code> ⟹ mọi bit phải đợi hết chuỗi carry. Ở bản quay vòng, <code>acc_q[1]</code> sẽ là đường ngắn nhất</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Bão hoà tốn bao nhiêu ns, bao nhiêu cell?</td>
+<td>Trực tiếp: <strong>0,79 ns</strong> (11,8 %) và <strong>≈ 14 cell</strong> (11,8 %). Nhưng chi phí <strong>cấu trúc</strong> lớn hơn — chỉ đo được bằng A/B, và A/B <strong>chưa chạy</strong></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Hai cảnh báo <code>sorry: constant selects…</code> là lỗi gì?</td>
+<td><strong>Giới hạn công cụ, vô hại.</strong> Icarus không phân tích được part-select trong danh sách nhạy ngầm của <code>always_comb</code> nên đưa <strong>cả 17 bit</strong> vào — rộng <strong>hơn</strong> mức cần, tức <strong>bảo thủ và an toàn</strong></td>
+</tr>
+<tr>
+<td>9</td>
+<td>Mô phỏng đỏ. Lỗi ở DUT, testbench hay mô hình chuẩn?</td>
+<td><strong>Testbench.</strong> Vector dòng 44 kỳ vọng <code>sat = 1</code> ở phép cộng <code>0xFF00 + 1 = 0xFF01</code> — không hề tràn. Người viết nhầm <code>acc_out_hi = 0xFF</code> với <code>acc_q = 0xFFFF</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td>Testbench đã phủ hết Charter mục 8 chưa?</td>
+<td><strong>Chưa — 0/4.</strong> Ca "sát giới hạn" và "vượt giới hạn" <strong>không thật sự tồn tại</strong> (vector sai); ca "cộng 0" thiếu; ca "xoá rồi cộng lại" <strong>không thể chạy</strong> vì RTL thiếu cổng</td>
+</tr>
+<tr>
+<td>11</td>
+<td>RTL có thoả Charter mục 4 không?</td>
+<td><strong>Không.</strong> Thiếu cổng <code>xoá</code> (<code>uio_in[1]</code>), <code>inc_in</code> 16 bit thay vì mẫu 8 bit, chưa có vỏ <code>tt_um_*</code>, và xung đột <code>uio[0]</code> chưa quyết</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Nếu sửa <code>inc_in</code> xuống 8 bit cho đúng ngân sách chân thì sao?</td>
+<td>Phải <strong>nạp hai nhịp</strong> ⟹ sinh ra một <strong>FSM thật</strong> (<code>LOW/HIGH</code>). Lỗi giao diện này đổi cả kiến trúc, không chỉ đổi số chân</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Số <code>6,71 ns</code> cho phép kết luận gì về tần số?</td>
+<td><strong>Không gì cả.</strong> Chưa ký sinh dây, một góc PVT, skew = 0, phụ thuộc <code>set_input_delay 1.0</code> giả định</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="11-gioi-han-da-chung-minh-duoc-gi-chua-chung-minh-duoc-gi">11. Giới hạn: đã chứng minh được gì, chưa chứng minh được gì</h2>
+<p><strong>Đã chứng minh:</strong>
+- Mô hình chuẩn Python nhất quán với đặc tả trên <strong>5000 ca ngẫu nhiên</strong> (<code>test_randomized</code>),
+  cộng các ca biên chính xác, tràn, dính và byte cao — PASS 6/6.
+- RTL <strong>thoả cả bốn ràng buộc</strong> của Charter mục 10: dùng bit carry, không so sánh sau khi
+  cắt, bão hoà dính, biên chính xác.
+- RTL tổng hợp được ra 119 standard cell sky130, <strong>18 flip-flop</strong> — khớp Charter mục 10.
+- Logic bão hoà tồn tại thật trong netlist: net <code>_093_</code>, 15 tải, 14 cell ép.
+- Đường tới hạn ở mức sau tổng hợp: <code>inc_in[1] → acc_q[1]</code>, 19 cell, 6,71 ns, slack MET;
+  phân rã được tới từng đoạn.
+- ⭐ Phát hiện cấu trúc: bão hoà <strong>san phẳng đồ thị phụ thuộc</strong> — <code>acc_q[1]</code> và
+  <code>acc_out_hi[2]</code> có arrival bằng nhau.
+- Lỗi mô phỏng đã được <strong>định vị và phán xử</strong>: nằm ở <strong>testbench</strong>, không ở thiết kế; và hai
+  cảnh báo biên dịch là <strong>giới hạn công cụ vô hại</strong>.</p>
+<p><strong>Chưa chứng minh:</strong>
+- Chức năng của RTL — mô phỏng dừng ở chu kỳ C6 (dù phán xử cho thấy DUT đúng).
+- Độ phủ Charter mục 8 — <strong>0/4 ca bắt buộc</strong> thật sự được thực hiện đúng. REQ-G04-010
+  <strong>CHƯA THOẢ</strong>.
+- REQ-G04-020 (Charter mục 9) — <strong>chưa chạy</strong> phiên bản quay vòng, chưa có bảng A/B.
+- REQ-G04-002 — <strong>thiếu cổng <code>xoá</code></strong>, <code>inc_in</code> sai độ rộng, chưa có vỏ <code>tt_um_*</code>.
+  <strong>CHƯA THOẢ</strong>.
+- Ngữ nghĩa của <code>sat</code> (lần cắt / đang ở trần) — <strong>chưa được chốt</strong> với giảng viên.
+- Việc Yosys gộp <code>acc_q[15:8]</code> vào <code>acc_out_hi</code> có bảo toàn hành vi — cần mô phỏng
+  gate-level hoặc kiểm tương đương hình thức (ca <strong>G-2</strong>, chưa chạy).
+- Netlist tương đương RTL, độ trễ thật sau routing, biên an toàn qua các góc PVT, công suất
+  thật của ứng dụng.
+- Layout, DRC, LVS, GDSII — chưa chạy flow vật lý.</p>
+<hr>
+<p><em>Phiên bản: v1.0 · Ngày: 2026-09-24</em></p>
+</main>
+<footer class="doc">
+  Tài liệu sinh từ <code>implementation-notes_G04.md</code>.
+  Mọi số liệu đều kèm công cụ, phiên bản và lệnh tái lập trong
+  <code>07_TRACEABILITY/evidence_index.md</code>.
+</footer>
+</div>
+<script>
+(function(){
+  var b=document.createElement('button');
+  b.className='themebtn'; b.type='button';
+  function lbl(){var t=document.documentElement.getAttribute('data-theme');
+    return t==='dark'?'Nen sang':(t==='light'?'Nen toi':'Doi nen');}
+  b.textContent=lbl();
+  try{var s=localStorage.getItem('rtl2gds-theme'); if(s)document.documentElement.setAttribute('data-theme',s);}catch(e){}
+  b.textContent=lbl();
+  b.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme');
+    var mq=window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next=cur?(cur==='dark'?'light':'dark'):(mq?'light':'dark');
+    document.documentElement.setAttribute('data-theme',next);
+    try{localStorage.setItem('rtl2gds-theme',next);}catch(e){}
+    b.textContent=lbl();
+  });
+  document.body.appendChild(b);
+})();
+</script>
+</body>
+</html>

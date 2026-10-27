@@ -45,7 +45,7 @@ module g04_tb;
     endtask
 
     initial begin
-        $dumpfile("05_VERIFICATION/waveforms/g04_tb.vcd");
+        $dumpfile("/mnt/d/G04_Bo_tich_luy_co_bao_hoa_16bit/05_VERIFICATION/waveforms/g04_tb.vcd");
         $dumpvars(0, g04_tb);
 
         clk = 0;

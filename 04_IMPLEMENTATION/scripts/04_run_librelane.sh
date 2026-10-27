@@ -17,7 +17,7 @@ if python3 -c "import librelane" 2>/dev/null; then RUNNER="python3 -m librelane"
 elif python3 -c "import openlane" 2>/dev/null; then RUNNER="python3 -m openlane"; echo "  openlane2  OK"
 else echo "  librelane  THIEU"; MISS=1; fi
 echo "  PDK_ROOT = ${PDK_ROOT:-<chua dat>}"
-[ -d "${PDK_ROOT:-/nonexistent}/sky130A" ] || { echo "  [CANH BAO] chua thay PDK sky130A"; MISS=1; }
+[ -d "${PDK_ROOT:-/nonexistent}/ciel/sky130/versions/792ef67037d74c8c51811eab3ce23cf793491296/sky130A" ] || { echo "  [CANH BAO] chua thay PDK sky130A"; MISS=1; }
 
 if [ "$MISS" -ne 0 ]; then
 cat <<'EOT'

@@ -1,2 +1,3 @@
+VCD info: dumpfile /mnt/d/G04_Bo_tich_luy_co_bao_hoa_16bit/05_VERIFICATION/waveforms/g04_tb.vcd opened for output.
 G04 TB completed
-05_VERIFICATION/testbench/g04_tb.sv:65: $finish called at 96 (1s)
+05_VERIFICATION/testbench/g04_tb.sv:110: $finish called at 176 (1s)
